@@ -51,14 +51,24 @@ export function TodoList({ todos, onUpdate, onDelete, viewMode }) {
                     }}>
                         {viewMode === 'day' ? format(new Date(items[0].createdAt), 'yyyy年M月d日 EEEE', { locale: zhCN }) : group}
                     </h3>
-                    {items.map(todo => (
-                        <TodoItem
-                            key={todo.id}
-                            todo={todo}
-                            onUpdate={onUpdate}
-                            onDelete={onDelete}
-                        />
-                    ))}
+                    <div style={{
+                        columnCount: 3,
+                        columnGap: '1rem',
+                        // Responsive column count could be handled with media queries in CSS, 
+                        // but inline styles are limited. We'll stick to a reasonable default 
+                        // or use a class if possible. For now, let's use a class or inline media query equivalent?
+                        // Since we can't easily do inline media queries, let's use a class in index.css or just style.
+                        // Let's use a class 'todo-grid' and define it in index.css for responsiveness.
+                    }} className="todo-masonry">
+                        {items.map(todo => (
+                            <TodoItem
+                                key={todo.id}
+                                todo={todo}
+                                onUpdate={onUpdate}
+                                onDelete={onDelete}
+                            />
+                        ))}
+                    </div>
                 </div>
             ))}
             {todos.length === 0 && (

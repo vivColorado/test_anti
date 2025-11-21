@@ -25,7 +25,8 @@ export function useTodos() {
         isDone: todo.is_done,
         createdAt: todo.created_at,
         endedAt: todo.ended_at,
-        duration: todo.duration
+        duration: todo.duration,
+        deadline: todo.deadline
       }));
 
       setTodos(formattedTodos);
@@ -58,7 +59,8 @@ export function useTodos() {
         isDone: data.is_done,
         createdAt: data.created_at,
         endedAt: data.ended_at,
-        duration: data.duration
+        duration: data.duration,
+        deadline: data.deadline
       }, ...todos]);
     } catch (error) {
       console.error('Error adding todo:', error);
@@ -70,6 +72,9 @@ export function useTodos() {
       // Calculate DB updates
       const dbUpdates = {};
       if (updates.content !== undefined) dbUpdates.content = updates.content;
+      if (updates.createdAt !== undefined) dbUpdates.created_at = updates.createdAt;
+      if (updates.endedAt !== undefined) dbUpdates.ended_at = updates.endedAt;
+      if (updates.deadline !== undefined) dbUpdates.deadline = updates.deadline;
 
       // Handle status change logic
       const currentTodo = todos.find(t => t.id === id);
@@ -80,14 +85,27 @@ export function useTodos() {
 
         if (updates.isDone && !currentTodo.isDone) {
           // Marking as done
-          const endedAt = new Date().toISOString();
-          dbUpdates.ended_at = endedAt;
-          const start = new Date(currentTodo.createdAt).getTime();
-          const end = new Date(endedAt).getTime();
-          dbUpdates.duration = end - start;
+          // Only set endedAt if not provided in updates
+          if (updates.endedAt === undefined) {
+            const endedAt = new Date().toISOString();
+            dbUpdates.ended_at = endedAt;
+          }
         } else if (!updates.isDone && currentTodo.isDone) {
           // Unmarking
           dbUpdates.ended_at = null;
+          dbUpdates.duration = null;
+        }
+      }
+
+      // Recalculate duration if times changed or status changed
+      if (dbUpdates.created_at || dbUpdates.ended_at || (dbUpdates.is_done !== undefined)) {
+        const start = new Date(dbUpdates.created_at || currentTodo.createdAt).getTime();
+        const endStr = dbUpdates.ended_at !== undefined ? dbUpdates.ended_at : currentTodo.endedAt;
+
+        if (endStr) {
+          const end = new Date(endStr).getTime();
+          dbUpdates.duration = end - start;
+        } else {
           dbUpdates.duration = null;
         }
       }
@@ -109,11 +127,15 @@ export function useTodos() {
           isDone: data.is_done,
           createdAt: data.created_at,
           endedAt: data.ended_at,
-          duration: data.duration
+          duration: data.duration,
+          deadline: data.deadline
         };
       }));
     } catch (error) {
       console.error('Error updating todo:', error);
+      if (error.message?.includes('column "deadline" does not exist')) {
+        console.error('The "deadline" column is missing in your Supabase table. Please run: alter table todos add column if not exists deadline timestamptz;');
+      }
     }
   };
 
